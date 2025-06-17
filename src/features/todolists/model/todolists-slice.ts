@@ -1,3 +1,4 @@
+import { setAppStatusAC } from "@/app/app-slice"
 import { createAppSlice } from "@/common/utils"
 import { todolistsApi } from "@/features/todolists/api/todolistsApi"
 import type { Todolist } from "@/features/todolists/api/todolistsApi.types"
@@ -11,11 +12,6 @@ export const todolistsSlice = createAppSlice({
   },
   extraReducers: (builder) => {
     builder
-      // .addCase(fetchTodolistsTC.fulfilled, (state, action) => {
-      //   action.payload?.todolists.forEach((tl) => {
-      //     state.push({ ...tl, filter: "all" })
-      //   })
-      // })
       .addCase(createTodolistTC.fulfilled, (state, action) => {
         state.unshift({ ...action.payload.todolist, filter: "all" })
       })
@@ -40,12 +36,15 @@ export const todolistsSlice = createAppSlice({
       }
     }),
     fetchTodolistsTC: create.asyncThunk(
-      async (_, thunkAPI) => {
+      async (_, { dispatch, rejectWithValue }) => {
         try {
+          dispatch(setAppStatusAC({status: 'loading'}))
           const res = await todolistsApi.getTodolists()
+          dispatch(setAppStatusAC({ status: 'succeeded' }))
           return { todolists: res.data }
         } catch (error) {
-          return thunkAPI.rejectWithValue(null)
+          dispatch(setAppStatusAC({ status: "failed" }))
+          return rejectWithValue(null)
         }
       },
       {
@@ -58,15 +57,6 @@ export const todolistsSlice = createAppSlice({
     ),
   }),
 })
-
-// export const fetchTodolistsTC = createAsyncThunk(`${todolistsSlice.name}/fetchTodolistsTC`, async (_, thunkAPI) => {
-//   try {
-//     const res = await todolistsApi.getTodolists()
-//     return { todolists: res.data }
-//   } catch (error) {
-//     return thunkAPI.rejectWithValue(null)
-//   }
-// })
 
 export const createTodolistTC = createAsyncThunk(
   `${todolistsSlice.name}/createTodolistTC`,
@@ -105,7 +95,7 @@ export const changeTodolistTitleTC = createAsyncThunk(
 )
 
 export const { selectTodolists } = todolistsSlice.selectors
-export const {fetchTodolistsTC, changeTodolistFilterAC } = todolistsSlice.actions
+export const { fetchTodolistsTC, changeTodolistFilterAC } = todolistsSlice.actions
 export const todolistsReducer = todolistsSlice.reducer
 
 export type DomainTodolist = Todolist & {

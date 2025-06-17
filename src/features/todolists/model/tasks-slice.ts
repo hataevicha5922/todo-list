@@ -4,6 +4,7 @@ import { tasksApi } from "../api/tasksApi"
 import { DomainTask, UpdateTaskModel } from "../api/tasksApi.types"
 import { TaskStatus } from "@/common/enums"
 import { RootState } from "@/app/store"
+import { setAppStatusAC } from "@/app/app-slice"
 
 export const tasksSlice = createAppSlice({
   name: "tasks",
@@ -41,12 +42,15 @@ export const tasksSlice = createAppSlice({
       },
     ),
     createTaskTC: create.asyncThunk(
-      async (payload: { todolistId: string; title: string }, thunkAPI) => {
+      async (payload: { todolistId: string; title: string }, { dispatch, rejectWithValue }) => {
         try {
+          dispatch(setAppStatusAC({ status: "loading" }))
           const res = await tasksApi.createTask(payload)
+          dispatch(setAppStatusAC({ status: "succeeded" }))
           return { task: res.data.data.item }
         } catch (err) {
-          return thunkAPI.rejectWithValue(err)
+          dispatch(setAppStatusAC({ status: "failed" }))
+          return rejectWithValue(err)
         }
       },
       {
@@ -56,14 +60,18 @@ export const tasksSlice = createAppSlice({
       },
     ),
     changeTaskStatusTC: create.asyncThunk(
-      async (payload: { todolistId: string; taskId: string; status: TaskStatus }, thunkAPI) => {
+      async (
+        payload: { todolistId: string; taskId: string; status: TaskStatus },
+        { dispatch, rejectWithValue, getState },
+      ) => {
         const { status, taskId, todolistId } = payload
 
-        const allTodolistTasks = (thunkAPI.getState() as RootState).tasks[todolistId]
+        const allTodolistTasks = (getState() as RootState).tasks[todolistId]
         const task = allTodolistTasks.find((task) => task.id === taskId)
 
         if (!task) {
-          return thunkAPI.rejectWithValue(null)
+          dispatch(setAppStatusAC({ status: "failed" }))
+          return rejectWithValue(null)
         }
 
         const model: UpdateTaskModel = {
@@ -76,10 +84,14 @@ export const tasksSlice = createAppSlice({
         }
 
         try {
+          dispatch(setAppStatusAC({ status: "loading" }))
           const res = await tasksApi.updateTask({ todolistId, taskId, model })
+          dispatch(setAppStatusAC({ status: "succeeded" }))
           return { task: res.data.data.item }
         } catch (err) {
-          return thunkAPI.rejectWithValue(null)
+          dispatch(setAppStatusAC({ status: "failed" }))
+
+          return rejectWithValue(null)
         }
       },
       {
@@ -98,12 +110,15 @@ export const tasksSlice = createAppSlice({
       }
     }),
     fetchTasksTC: create.asyncThunk(
-      async (todolistId: string, thunkAPI) => {
+      async (todolistId: string, { dispatch, rejectWithValue }) => {
         try {
+          dispatch(setAppStatusAC({ status: "loading" }))
           const res = await tasksApi.getTasks(todolistId)
+          dispatch(setAppStatusAC({ status: "succeeded" }))
           return { todolistId, tasks: res.data.items }
         } catch (err) {
-          return thunkAPI.rejectWithValue(err)
+          dispatch(setAppStatusAC({ status: "failed" }))
+          return rejectWithValue(err)
         }
       },
       {
